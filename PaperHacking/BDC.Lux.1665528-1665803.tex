@@ -1,5 +1,10 @@
 \documentclass[]{article}
 \usepackage{float, graphics, graphicx}
+\usepackage{listings}
+
+\lstset{
+	language=Java
+}
 
 \title{Lux: A Distributed Multi-GPU System for Fast Graph Processing}
 \author{1665528-Emiliano Luci, 1665803-Federico Trombetti}
@@ -39,11 +44,26 @@ Many framework exists for graph processing. We will quickly go over them and whe
  We will now go through the framework structure and how the authors approached the problems presented.
  \subsection{The computation model}
  
+With some loss of generality, programs in Lux operate on immutable edges; vertices can be at most updated at each iteration. Furthermore all programs must implement the following interface:
  
- 
- 
+\begin{lstlisting}[escapeinside={(*}{*)}]
+interface Program (V, E) {
+    void init ( Vertex v, Vertex v(*$_{old}$*) );
+    void compute ( Vertex v, Vertex u(*$_{old}$*), Edge e );
+    boolean update ( Vertex v, Vertex v(*$_{old}$*) );
+}
+\end{lstlisting}
+The programs terminate when a convergence test succeeds.\\\\
+Lux presents 2 iteration model for the execution of a program:
+\begin{itemize}
+	\item \textbf{Pull Model}: in this model the compute function operates on all the in-neighbours of each vertex, thus \textit{pulling} updates from them. The program terminates when vertices are no longer pulling any updates.
+	\item \textbf{Push Model}: in this model the compute function operates on a subset of the out-neighbours of each vertex. Updates are \textit{pushed} from each vertex to its out-neighbours, issuing an explicit update. The program terminates when no vertex has any update to push.
+\end{itemize}
+The choice between the two models depends of course on the algorithm. If we're frequently updating large subset of the graph the pull model lets us exploit GPU optimizations such as aggregation of updates in shared memory. If however we're only updating a very small subset of the graph we don't want to pay the cost of operating on ALL of the vertices' neighbours at each iteration and instead we'd rather incur in the penalty of having to synchronize the small number of updates we explicitly push.
+
 \section{Critique}
-We will now present some possible critiques to the paper. The first one is how, much like other frameworks, Lux forces the user to cast their algorithm into a rigidly fixed interface. While this may fit many problems from other existing examples of such an approach we imagine that there will be algorithms that must take an awkward form to fit into Lux's program interface.\\
+We will now present some possible critiques to the paper.\\
+The first one is on the restriction imposed on the program structure. This is similar to the criticism that has been expressed for MapReduce. Some problems will fit naturally in the interface provided but others must be awkwardly cast into it in order to make use of the framework.\\
 
 \noindent The other critique we can make is about its name. Are you fkin kidding me? Like, just fkin scream Demacia and go kill yourself, fkin ulted from spawn, nerf pls.
 \end{document}

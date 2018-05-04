@@ -37,12 +37,12 @@ Many framework exists for graph processing. We will quickly go over them and whe
 \begin{itemize}
 	\item \textbf{Distributed CPU-based systems}: CPUs are usually more limited in number of cores, large clusters imply greater message passing, access to DRAM is slow and not optimized for coalesced requests.
 	\item \textbf{Single-Node CPU-based systems}: While this approach eliminates the need for inter-node communication it suffers from the same problems of untapped parallelization and memory bottleneck.
-	\item \textbf{GPU-based systems}: the currently existing frameworks focus on single machine - multi GPUs systems and present do not fully exploit the internal optimizations done by GPUs nor present a good approach to move data between memory hierarchies.
+	\item \textbf{GPU-based systems}: the currently existing frameworks focus on single machine - multi GPUs systems and do not fully exploit the internal optimizations done by GPUs nor present a good approach to move data between memory hierarchies.
 \end{itemize}
  
  \section{Contribution of the paper}
  We will now go through the framework structure and how the authors approached the problems presented.
- \subsection{The computation model}
+ \subsection{Model of computation}
  
 With some loss of generality, programs in Lux operate on immutable edges; vertices can be at most updated at each iteration. Furthermore all programs must implement the following interface:
  
@@ -59,7 +59,22 @@ Lux presents 2 iteration model for the execution of a program:
 	\item \textbf{Pull Model}: in this model the compute function operates on all the in-neighbours of each vertex, thus \textit{pulling} updates from them. The program terminates when vertices are no longer pulling any updates.
 	\item \textbf{Push Model}: in this model the compute function operates on a subset of the out-neighbours of each vertex. Updates are \textit{pushed} from each vertex to its out-neighbours, issuing an explicit update. The program terminates when no vertex has any update to push.
 \end{itemize}
-The choice between the two models depends of course on the algorithm. If we're frequently updating large subset of the graph the pull model lets us exploit GPU optimizations such as aggregation of updates in shared memory. If however we're only updating a very small subset of the graph we don't want to pay the cost of operating on ALL of the vertices' neighbours at each iteration and instead we'd rather incur in the penalty of having to synchronize the small number of updates we explicitly push.
+The choice between the two models depends, of course, on the algorithm. If we're frequently updating large subset of the graph the pull model lets us exploit GPU optimizations such as aggregation of updates in shared memory. If, however, we're only updating a very small subset of the graph we don't want to pay the cost of operating on ALL of the vertices' neighbours at each iteration and instead we'd rather incur in the penalty of having to synchronize the small number of updates we explicitly push.
+
+\subsection{Runtime}
+\subsubsection{Memory utilization}
+Consider the memory hierarchy presented in Fig.\ref{fig:gpu_cluster}. We know that:
+\begin{itemize}
+	\item The GPU shared memory is much faster than the Device memory which is faster than the Zero-copy memory
+	\item The GPU shared memory is much smaller than the Device memory which is smaller than the Zero-copy memory
+	\item Zero-copy memory is visible to ALL processors ( GPUs and CPUs).
+\end{itemize}
+Thus it makes sense that updates are first aggregated in the shared memory then pushed to the Zero-copy memory. While we gloss over the specifics of the task execution, this careful use of the different kind of memories constitutes the core strategy for reducing the time each GPU thread takes to complete all other things being equal. Additionally Lux also leverages the CPUs to perform computation on data stored in Zero-copy memory when the graph won't fit in the Devices Memories.
+\subsubsection{Graph Placement}
+Since we have many units of computation we clearly need a partitioning of the graph. In this regard Lux employs a particularly appropriate strategy: instead of trying to do a very clever partitioning it instead goes for a very fast edge partitioning approach. Vertices are assigned a unique number between $0$ and $|V-1|$. Partitions are assigned consecutive vertices such that each partition gets a fairly equal number of edges associated with the vertices. This partitioning is not only stupidly fast to compute it also exploits an optimization done by GPUs for parallel consecutive memory accesses which are coalesced into a single range request which greatly reduces the time spent fetching data. Furthermore this partitioning offers two other benefits: we only need to keep a very small amount of information regarding each partition, namely the set of in/out-neighbours and their difference (which is the set of nodes that we need to update at each iteration); and, since Lux accepts graphs given in Compressed Sparse Row format it can ulteriorly speed up the computation of the splits needed to balance the partitions. This is great since it's almost guaranteed that graphs of billions of edges will be stored in a compressed format anyway.
+
+
+
 
 \section{Critique}
 We will now present some possible critiques to the paper.\\

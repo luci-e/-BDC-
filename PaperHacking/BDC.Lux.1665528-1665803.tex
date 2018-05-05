@@ -15,7 +15,7 @@
 
 \section{Introduction}
 \subsection{Description of the problem}
-Graph application have a high ratio of random memory accesses / actual computation done and are often embarrassingly parallel. It thus makes sense to leverage an architecture with a very high memory bandwidth and a high number of computational units. Fortunately, GPUs clusters are a thing that exists. 
+Graph applicationd have a high ratio of random memory accesses / actual computation done and are often embarrassingly parallel. It thus makes sense to leverage an architecture with a very high memory bandwidth and a high number of computational units. Fortunately, GPUs clusters are a thing that exists. 
 
 \begin{figure}[H]
 
@@ -24,8 +24,7 @@ Graph application have a high ratio of random memory accesses / actual computati
 	\caption{The structure of a GPUs cluster}
 	\label{fig:gpu_cluster}
 \end{figure}
-
-As we can see in Fig.\ref{fig:gpu_cluster} GPUs clusters have a very heterogeneous structure. In order to exploit the full potential of such a system one needs to build a framework that
+As we can see in Fig.\ref{fig:gpu_cluster} GPUs clusters have a very heterogeneous structure. In order to exploit the full potential of such a system one needs to build a framework that:
 \begin{itemize}
 	\item Distributes the graph efficiently amongst devices and within each device amongst the memories hierarchy.
 	\item Find the best way to maximize locality in the memory access of the hierarchy.
@@ -69,7 +68,7 @@ Consider the memory hierarchy presented in Fig.\ref{fig:gpu_cluster}. We know th
 	\item The GPU shared memory is much smaller than the Device memory which is smaller than the Zero-copy memory
 	\item Zero-copy memory is visible to ALL processors ( GPUs and CPUs).
 \end{itemize}
-Thus it makes sense that updates are first aggregated in the shared memory then pushed to the Zero-copy memory. While we gloss over the specifics of the task execution, this careful use of the different kind of memories constitutes the core strategy for reducing the time each GPU thread takes to complete all other things being equal. Additionally Lux also leverages the CPUs to perform computation on data stored in Zero-copy memory when the graph won't fit in the Devices Memories.
+Thus it makes sense that updates are first aggregated in the shared memory then pushed to the Zero-copy memory. While we gloss over the specifics of the task execution, this careful use of the different kind of memories constitutes the core strategy for reducing the time each GPU thread takes to complete, all other things being equal. Additionally Lux also leverages the CPUs to perform computation on data stored in Zero-copy memory when the graph won't fit in the Devices Memories.
 \subsubsection{Graph Placement}
 Since we have many units of computation we clearly need a partitioning of the graph. In this regard Lux employs a particularly appropriate strategy: instead of trying to do a very clever partitioning it instead goes for a very fast edge partitioning approach. Vertices are assigned a unique number between $0$ and $|V-1|$. Partitions are assigned consecutive vertices such that each partition gets a fairly equal number of edges associated with the vertices. This partitioning is not only stupidly fast to compute it also exploits an optimization done by GPUs for parallel consecutive memory accesses which are coalesced into a single range request which greatly reduces the time spent fetching data. Furthermore this partitioning offers two other benefits: we only need to keep a very small amount of information regarding each partition, namely the set of in/out-neighbours and their difference (which is the set of nodes that we need to update at each iteration); and, since Lux accepts graphs given in Compressed Sparse Row format it can ulteriorly speed up the computation of the splits needed to balance the partitions. This is great since it's almost guaranteed that graphs of billions of edges will be stored in a compressed format anyway.
 \subsubsection{Load Balancing}
@@ -79,6 +78,8 @@ While the partitioning adopted is indeed fair in the number of edges it may not 
 \section{Critique}
 We will now present some possible critiques to the paper.\\
 The first one is on the restriction imposed on the program structure. This is similar to the criticism that has been expressed for MapReduce. Some problems will fit naturally in the interface provided but others must be awkwardly cast into it in order to make use of the framework.\\
+Secondly Lux frameworks is essentially built to benefit from GPU clusters, and instead performs comparably for single node systems. This is not necessarily a critique after all this is what it was designed for but it is to be considered if one doesn't have a GPU cluster just laying around under the bed.\\
+Additionally let us consider Lux's execution model: at each iteration lots of updates are passed around from device memory to Zero-copy memory, in fact, most of the time is indeed spent then and not in the compute phase. The memory bandwidth is thus a hard cap to Lux's efficiency. This is not much of a problem if the graph snugly fits into the collective devices memory, however, having to store the graph in regular DRAM greatly diminishes Lux's speedup. This is not shown in the evaluation phase in the paper, where tests on single GPU systems have been done with graphs that indeed fit into the device memory.
 
 \noindent The other critique we can make is about its name. Are you fkin kidding me? Like, just fkin scream Demacia and go kill yourself, fkin ulted from spawn, nerf pls.
 \end{document}

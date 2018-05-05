@@ -32,7 +32,7 @@ As we can see in Fig.\ref{fig:gpu_cluster} these systems have a very heterogeneo
 \end{itemize}
 
 \subsection{Current approaches}
-Many framework exists for graph processing. We will quickly go over them and where they present room for improvement:
+Many frameworks exist for graph processing. We will quickly go over them and where they present room for improvement:
 \begin{itemize}
 	\item \textbf{Distributed CPU-based systems}: CPUs are usually more limited in number of cores, large clusters imply greater message passing, access to DRAM is relatively slow and in any case not optimized for coalesced requests.
 	\item \textbf{Single-Node CPU-based systems}: While this approach eliminates the need for inter-node communication it suffers from the same problems of untapped parallelization and memory bottleneck.
@@ -53,12 +53,12 @@ interface Program (V, E) {
 }
 \end{lstlisting}
 The programs terminate when a convergence test succeeds.
-Lux presents 2 iteration model for the execution of a program:
+Lux presents 2 iteration models for the execution of a program:
 \begin{itemize}
 	\item \textbf{Pull Model}: in this model the compute function operates on all the in-neighbours of each vertex, thus \textit{pulling} updates from them. The program terminates when vertices are no longer pulling any updates.
 	\item \textbf{Push Model}: in this model the compute function operates on a subset of the out-neighbours of each vertex. Updates are \textit{pushed} from each vertex to its out-neighbours, issuing an explicit update. The program terminates when no vertex has any update to push.
 \end{itemize}
-The choice between the two models depends, of course, on the algorithm. If we're frequently updating large subset of the graph the pull model lets us exploit GPU optimizations such as aggregation of updates in shared memory. If, however, we're only updating a very small subset of the graph we don't want to pay the cost of operating on ALL of the vertices' neighbours at each iteration and, instead, we'd rather incur in the penalty of having to synchronize the small number of updates we explicitly push.
+The choice between the two models depends, of course, on the algorithm. If we're frequently updating large subsets of the graph the pull model lets us exploit GPU optimizations such as aggregation of updates in shared memory. If, however, we're only updating a very small subset of the graph we don't want to pay the cost of operating on ALL of the vertices' neighbours at each iteration and, instead, we'd rather incur in the penalty of having to synchronize the small number of updates we explicitly push.
 
 \subsection{Runtime}
 \subsubsection{Memory utilization}

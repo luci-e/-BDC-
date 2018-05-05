@@ -34,7 +34,7 @@ As we can see in Fig.\ref{fig:gpu_cluster} these systems have a very heterogeneo
 \subsection{Current approaches}
 Many frameworks exist for graph processing. We will quickly go over them and where they present room for improvement:
 \begin{itemize}
-	\item \textbf{Distributed CPU-based systems}: CPUs are usually more limited in number of cores, large clusters imply greater message passing, access to DRAM is relatively slow and in any case not optimized for coalesced requests.
+	\item \textbf{Distributed CPU-based systems}: CPUs are usually more limited in number of cores, large clusters imply greater message passing, access to DRAM is relatively slow and in any case not optimized for coalesced requests (exception made for some types of RAM designed for burst access).
 	\item \textbf{Single-Node CPU-based systems}: While this approach eliminates the need for inter-node communication it suffers from the same problems of untapped parallelization and memory bottleneck.
 	\item \textbf{GPU-based systems}: the currently existing frameworks focus on single machine - multi GPUs systems and do not fully exploit the internal optimizations done by GPUs nor present a good approach to move data between memory hierarchies.
 \end{itemize}
